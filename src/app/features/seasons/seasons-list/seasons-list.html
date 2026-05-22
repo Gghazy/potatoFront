@@ -1,0 +1,96 @@
+<div class="page">
+  <div class="page-toolbar mb-4">
+    <div>
+      <h2 class="mb-1">📅 المواسم</h2>
+      <p class="text-muted mb-0">إدارة العروات والمواسم الزراعية — كل فاتورة ومصروف وتلاجة تنتمى لموسم</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAdd()">
+      <i class="bi bi-plus-lg"></i>
+      <span class="ms-1">إضافة موسم</span>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>الملاحظات</th>
+            <th>تاريخ الإنشاء</th>
+            <th class="text-center">الافتراضى</th>
+            <th class="text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let s of seasons()">
+            <td class="fw-semibold">{{ s.name }}</td>
+            <td class="text-muted">
+              <span *ngIf="s.notes">{{ s.notes }}</span>
+              <span *ngIf="!s.notes">—</span>
+            </td>
+            <td>{{ s.createdAt | date:'yyyy-MM-dd' }}</td>
+            <td class="text-center">
+              <button *ngIf="s.isDefault" type="button" class="btn btn-sm btn-warning" disabled>
+                <i class="bi bi-star-fill"></i> الافتراضى
+              </button>
+              <button *ngIf="!s.isDefault" type="button" class="btn btn-sm btn-outline-secondary"
+                      (click)="setDefault(s)" title="جعله الموسم الافتراضى">
+                <i class="bi bi-star"></i> تحديد كافتراضى
+              </button>
+            </td>
+            <td class="text-center">
+              <button class="btn btn-sm btn-info me-1" (click)="edit(s)">
+                <i class="bi bi-pencil"></i> تعديل
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="askDelete(s.id)"
+                      [disabled]="s.isDefault"
+                      [title]="s.isDefault ? 'لا يمكن حذف الموسم الافتراضى' : 'حذف'">
+                <i class="bi bi-trash"></i> حذف
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="!hasSeasons() && !loading()">
+            <td colspan="5" class="empty-state py-5 text-center">
+              <div class="empty-state__icon">📅</div>
+              <div>لا توجد مواسم — اضغط "إضافة موسم" لإنشاء أول موسم</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <app-form-modal
+    [open]="showModal()"
+    [title]="editingId() !== null ? 'تعديل موسم' : 'إضافة موسم جديد'"
+    [saveLabel]="editingId() !== null ? 'تحديث' : 'إضافة'"
+    [saving]="saving()"
+    size="lg"
+    (save)="save()"
+    (cancel)="cancel()">
+    <div class="row g-3">
+      <div class="col-md-12">
+        <label class="form-label">اسم الموسم</label>
+        <input type="text" class="form-control" [ngModel]="form().name"
+               (ngModelChange)="updateForm('name', $event)"
+               placeholder="مثال: عروة شتوى 2026" />
+      </div>
+      <div class="col-md-12">
+        <label class="form-label">ملاحظات <span class="text-muted small">(اختيارى)</span></label>
+        <textarea class="form-control" rows="2" maxlength="1000"
+                  [ngModel]="form().notes ?? ''"
+                  (ngModelChange)="updateForm('notes', $event)"
+                  placeholder="أى ملاحظات إضافية..."></textarea>
+      </div>
+    </div>
+  </app-form-modal>
+
+  <app-confirm-delete-modal
+    [open]="deleteId() !== null"
+    title="تأكيد حذف الموسم"
+    message="هل أنت متأكد من حذف هذا الموسم؟"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()">
+  </app-confirm-delete-modal>
+</div>

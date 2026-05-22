@@ -1,0 +1,97 @@
+<div class="page">
+  <div class="page-toolbar mb-4">
+    <div>
+      <h2 class="mb-1">👥 المستخدمون</h2>
+      <p class="text-muted mb-0">إدارة حسابات النظام (إضافة وحذف)</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAdd()">
+      <i class="bi bi-plus-lg"></i>
+      <span class="ms-1">إضافة مستخدم</span>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th>الاسم</th>
+            <th>رقم التليفون</th>
+            <th>الدور</th>
+            <th>تاريخ الإنشاء</th>
+            <th class="text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of users()">
+            <td class="fw-semibold">{{ u.fullName }}</td>
+            <td dir="ltr">{{ u.phoneNumber || u.email || '—' }}</td>
+            <td>
+              <span class="badge" [class.badge-admin]="u.role === 'Admin'" [class.badge-user]="u.role === 'User'">
+                {{ roleLabel(u.role) }}
+              </span>
+            </td>
+            <td>{{ u.createdAt | date:'yyyy-MM-dd' }}</td>
+            <td class="text-center">
+              <button class="btn btn-sm btn-danger"
+                      [disabled]="u.id === currentUserId()"
+                      [title]="u.id === currentUserId() ? 'لا يمكنك حذف حسابك' : ''"
+                      (click)="askDelete(u.id)">
+                <i class="bi bi-trash"></i> حذف
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="users().length === 0">
+            <td colspan="5" class="empty-state py-5 text-center">
+              <div class="empty-state__icon">👥</div>
+              <div>لا توجد مستخدمين بعد</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <app-form-modal
+    [open]="showModal()"
+    title="إضافة مستخدم جديد"
+    saveLabel="إضافة"
+    [saving]="saving()"
+    size="lg"
+    (save)="save()"
+    (cancel)="cancel()">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label">الاسم الكامل</label>
+        <input type="text" class="form-control" [ngModel]="form().fullName"
+               (ngModelChange)="updateForm('fullName', $event)" placeholder="مثال: أحمد محمد" />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">رقم التليفون</label>
+        <input type="tel" class="form-control" dir="ltr" [ngModel]="form().phoneNumber"
+               (ngModelChange)="updateForm('phoneNumber', $event)" placeholder="01012345678" />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">كلمة المرور</label>
+        <input type="password" class="form-control" [ngModel]="form().password"
+               (ngModelChange)="updateForm('password', $event)" placeholder="••••••••" />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">الدور</label>
+        <select class="form-select" [ngModel]="form().role"
+                (ngModelChange)="updateForm('role', $event)">
+          <option value="User">مستخدم</option>
+          <option value="Admin">مدير</option>
+        </select>
+      </div>
+    </div>
+  </app-form-modal>
+
+  <app-confirm-delete-modal
+    [open]="deleteId() !== null"
+    title="تأكيد حذف المستخدم"
+    message="هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع عن هذه العملية."
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()">
+  </app-confirm-delete-modal>
+</div>

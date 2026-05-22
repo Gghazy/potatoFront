@@ -1,0 +1,316 @@
+<div class="page">
+  <div class="page-toolbar mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <button class="btn btn-sm btn-secondary" (click)="back()" title="رجوع للقائمة">
+        <i class="bi bi-arrow-right"></i>
+      </button>
+      <div>
+        <h2 class="mb-1">
+          <ng-container *ngIf="isNew()">❄️ تلاجة جديدة</ng-container>
+          <ng-container *ngIf="isEdit()">✏️ تعديل تلاجة</ng-container>
+          <ng-container *ngIf="isView()">❄️ {{ loaded()?.name || 'تفاصيل تلاجة' }}</ng-container>
+        </h2>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2" *ngIf="isView()">
+      <button class="btn btn-info" (click)="switchToEdit()">
+        <i class="bi bi-pencil"></i> تعديل
+      </button>
+      <button class="btn btn-danger" (click)="askDeleteRefrigerator()">
+        <i class="bi bi-trash"></i> حذف
+      </button>
+    </div>
+
+    <div class="d-flex gap-2" *ngIf="isEditable()">
+      <button class="btn btn-secondary" (click)="cancelEdit()">إلغاء</button>
+      <button class="btn btn-primary" [disabled]="saving()" (click)="saveHeader()">
+        <i class="bi bi-check-lg"></i>
+        {{ isNew() ? 'إضافة' : 'حفظ التغييرات' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="loading-card" *ngIf="loading()">جارٍ التحميل...</div>
+
+  <div class="card empty-card" *ngIf="!loading() && notFound()">
+    <div class="empty-state__icon">⚠️</div>
+    <div>التلاجة غير موجودة أو لا تملك صلاحية عرضها</div>
+  </div>
+
+  <div class="row g-4" *ngIf="!loading() && !notFound()">
+    <!-- Left column -->
+    <div class="col-lg-8">
+      <!-- Header (name + notes) -->
+      <section class="form-section">
+        <header class="form-section__header">
+          <i class="bi bi-snow"></i>
+          <span>بيانات التلاجة</span>
+        </header>
+        <div class="row g-3" *ngIf="isEditable(); else viewHeader">
+          <div class="col-md-12">
+            <label class="form-label">اسم التلاجة</label>
+            <input type="text" class="form-control form-control-lg"
+                   [ngModel]="headerForm().name"
+                   (ngModelChange)="updateHeaderField('name', $event)"
+                   placeholder="مثال: تلاجة المخزن الرئيسى" />
+          </div>
+          <div class="col-md-12">
+            <label class="form-label">ملاحظات <span class="text-muted small">(اختيارى)</span></label>
+            <textarea class="form-control" rows="2" maxlength="1000"
+                      [ngModel]="headerForm().notes ?? ''"
+                      (ngModelChange)="updateHeaderField('notes', $event)"></textarea>
+          </div>
+        </div>
+        <ng-template #viewHeader>
+          <div class="details-grid">
+            <div><span class="details-label">الاسم</span><strong>{{ loaded()?.name }}</strong></div>
+            <div class="grid-full" *ngIf="loaded()?.notes">
+              <span class="details-label">ملاحظات</span>
+              <div class="notes-readonly">{{ loaded()?.notes }}</div>
+            </div>
+          </div>
+        </ng-template>
+      </section>
+
+      <!-- Items (only shown for existing refrigerators) -->
+      <section class="form-section" *ngIf="!isNew()">
+        <header class="form-section__header">
+          <i class="bi bi-box-seam"></i>
+          <span>عناصر التلاجة <span class="form-section__hint">({{ items().length }} عنصر)</span></span>
+          <button type="button" *ngIf="!showNewItem()" class="btn btn-sm btn-primary ms-auto" (click)="openNewItem()">
+            <i class="bi bi-plus-lg"></i> إضافة عنصر
+          </button>
+        </header>
+
+        <div class="entry-form" *ngIf="showNewItem()">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label small">التاريخ</label>
+              <input type="date" class="form-control form-control-sm"
+                     [ngModel]="itemForm().date"
+                     (ngModelChange)="updateItemField('date', $event)" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small">عدد الشكاير</label>
+              <input type="number" class="form-control form-control-sm text-center"
+                     [ngModel]="itemForm().sackCount"
+                     (ngModelChange)="updateItemField('sackCount', +$event)" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small">الوزن (كجم)</label>
+              <input type="number" class="form-control form-control-sm text-center"
+                     [ngModel]="itemForm().weight"
+                     (ngModelChange)="updateItemField('weight', +$event)" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">وصف</label>
+              <input type="text" class="form-control form-control-sm"
+                     placeholder="اختيارى"
+                     [ngModel]="itemForm().description ?? ''"
+                     (ngModelChange)="updateItemField('description', $event)" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+              <button type="button" class="btn btn-sm btn-success" [disabled]="savingItem()" (click)="saveItem()">
+                <i class="bi bi-check-lg"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" (click)="cancelItemForm()">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-2">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle text-center">
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>عدد الشكاير</th>
+                  <th>الوزن (كجم)</th>
+                  <th class="text-start">وصف</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let i of items()">
+                  <td>{{ i.date | date:'yyyy-MM-dd' }}</td>
+                  <td>{{ i.sackCount | number }}</td>
+                  <td>{{ i.weight | number:'1.2-2' }}</td>
+                  <td class="text-start">{{ i.description || '—' }}</td>
+                  <td>
+                    <button class="btn btn-sm btn-info me-1" (click)="editItem(i)">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="askDeleteItem(i.id)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="items().length === 0">
+                  <td colspan="5" class="text-muted py-3">لا توجد عناصر</td>
+                </tr>
+              </tbody>
+              <tfoot *ngIf="items().length > 0">
+                <tr class="totals-row">
+                  <td class="fw-semibold">الإجمالى</td>
+                  <td><strong>{{ totalSackCount() | number }}</strong></td>
+                  <td><strong>{{ totalWeight() | number:'1.2-2' }} كجم</strong></td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Expenses -->
+      <section class="form-section" *ngIf="!isNew()">
+        <header class="form-section__header">
+          <i class="bi bi-cash-coin"></i>
+          <span>مصاريف التلاجة <span class="form-section__hint">({{ expenses().length }} مصروف)</span></span>
+          <button type="button" *ngIf="!showNewExpense()" class="btn btn-sm btn-danger ms-auto" (click)="openNewExpense()">
+            <i class="bi bi-plus-lg"></i> إضافة مصروف
+          </button>
+        </header>
+
+        <div class="entry-form" *ngIf="showNewExpense()">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+              <label class="form-label small">التاريخ</label>
+              <input type="date" class="form-control form-control-sm"
+                     [ngModel]="expenseForm().date"
+                     (ngModelChange)="updateExpenseField('date', $event)" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small">المبلغ</label>
+              <div class="input-group input-group-sm">
+                <input type="number" class="form-control text-center"
+                       [ngModel]="expenseForm().amount"
+                       (ngModelChange)="updateExpenseField('amount', +$event)" />
+                <span class="input-group-text">ج.م</span>
+              </div>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small">الوصف</label>
+              <input type="text" class="form-control form-control-sm"
+                     placeholder="مثلاً: كهرباء، صيانة، عمالة..."
+                     [ngModel]="expenseForm().description"
+                     (ngModelChange)="updateExpenseField('description', $event)" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small">ملاحظات</label>
+              <input type="text" class="form-control form-control-sm"
+                     [ngModel]="expenseForm().notes ?? ''"
+                     (ngModelChange)="updateExpenseField('notes', $event)" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+              <button type="button" class="btn btn-sm btn-success" [disabled]="savingExpense()" (click)="saveExpense()">
+                <i class="bi bi-check-lg"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-secondary" (click)="cancelExpenseForm()">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mt-2">
+          <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>الوصف</th>
+                  <th>ملاحظات</th>
+                  <th class="text-end">المبلغ</th>
+                  <th class="text-center">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let e of expenses()">
+                  <td>{{ e.date | date:'yyyy-MM-dd' }}</td>
+                  <td class="fw-semibold">{{ e.description }}</td>
+                  <td class="text-muted">{{ e.notes || '—' }}</td>
+                  <td class="text-end fw-semibold text-danger">{{ e.amount | egp }}</td>
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-info me-1" (click)="editExpense(e)">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="askDeleteExpense(e.id)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="expenses().length === 0">
+                  <td colspan="5" class="text-muted text-center py-3">لا توجد مصاريف</td>
+                </tr>
+              </tbody>
+              <tfoot *ngIf="expenses().length > 0">
+                <tr class="totals-row">
+                  <td colspan="3" class="text-end fw-semibold">الإجمالى</td>
+                  <td class="text-end"><strong class="text-danger">{{ totalExpenses() | egp }}</strong></td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Right summary panel -->
+    <div class="col-lg-4">
+      <aside class="summary-panel">
+        <header class="summary-panel__header">
+          <i class="bi bi-clipboard-data"></i>
+          <span>ملخص التلاجة</span>
+        </header>
+
+        <div class="summary-panel__row">
+          <span class="summary-panel__label">عدد العناصر</span>
+          <strong class="summary-panel__value">{{ items().length }}</strong>
+        </div>
+        <div class="summary-panel__row">
+          <span class="summary-panel__label">إجمالى الشكاير</span>
+          <strong class="summary-panel__value">{{ totalSackCount() | number }}</strong>
+        </div>
+
+        <div class="summary-panel__amount summary-panel__amount--weight">
+          <span class="summary-panel__amount-label">إجمالى الوزن</span>
+          <span class="summary-panel__amount-value">{{ totalWeight() | number:'1.2-2' }} <small>كجم</small></span>
+        </div>
+
+        <div class="summary-panel__amount summary-panel__amount--expenses">
+          <span class="summary-panel__amount-label">إجمالى المصاريف</span>
+          <span class="summary-panel__amount-value text-danger">{{ totalExpenses() | egp }}</span>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <app-confirm-delete-modal
+    [open]="confirmDeleteRefrigerator()"
+    title="تأكيد حذف التلاجة"
+    message="هل أنت متأكد؟ هتُحذف كل العناصر والمصاريف المرتبطة بيها."
+    (confirm)="doDeleteRefrigerator()"
+    (cancel)="cancelDeleteRefrigerator()">
+  </app-confirm-delete-modal>
+
+  <app-confirm-delete-modal
+    [open]="confirmDeleteItemId() !== null"
+    title="تأكيد حذف العنصر"
+    message="هل أنت متأكد من حذف هذا العنصر؟"
+    (confirm)="doDeleteItem()"
+    (cancel)="cancelDeleteItem()">
+  </app-confirm-delete-modal>
+
+  <app-confirm-delete-modal
+    [open]="confirmDeleteExpenseId() !== null"
+    title="تأكيد حذف المصروف"
+    message="هل أنت متأكد من حذف هذا المصروف؟"
+    (confirm)="doDeleteExpense()"
+    (cancel)="cancelDeleteExpense()">
+  </app-confirm-delete-modal>
+</div>

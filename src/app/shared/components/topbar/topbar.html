@@ -1,0 +1,151 @@
+<nav class="navbar topbar" [class.topbar--menu-open]="mobileMenuOpen()">
+  <div class="container-fluid">
+    <!-- Brand -->
+    <div class="topbar__brand">
+      <span class="navbar-brand">🥔 {{ appName }}</span>
+    </div>
+
+    <!-- Desktop nav links -->
+    <ul class="navbar-nav topbar__nav me-auto mb-0 flex-row gap-1">
+      <li class="nav-item" *ngFor="let link of links()">
+        <a class="nav-link"
+           [routerLink]="link.path"
+           routerLinkActive="active"
+           [routerLinkActiveOptions]="{ exact: link.exact }">
+          {{ link.label }}
+        </a>
+      </li>
+    </ul>
+
+    <!-- Right side: context group + user actions -->
+    <div class="topbar__right">
+      <!-- Context group: tenant + season -->
+      <div class="context-group" *ngIf="tenantName() || showSeasonSwitcher()">
+        <span class="context-group__item context-group__tenant" *ngIf="tenantName()">
+          <i class="bi bi-building"></i>
+          {{ tenantName() }}
+        </span>
+
+        <span class="context-group__divider" *ngIf="tenantName() && showSeasonSwitcher()"></span>
+
+        <div class="season-switcher" *ngIf="showSeasonSwitcher()">
+          <button type="button" class="season-switcher__toggle"
+                  (click)="toggleSeasonMenu()"
+                  [class.season-switcher__toggle--open]="seasonMenuOpen()">
+            <i class="bi bi-calendar3-event"></i>
+            <span class="season-switcher__name">
+              {{ selectedSeason()?.name || 'كل المواسم' }}
+            </span>
+            <i class="bi bi-chevron-down season-switcher__caret"></i>
+          </button>
+
+          <div class="season-switcher__menu" *ngIf="seasonMenuOpen()">
+            <button type="button" class="season-switcher__item"
+                    [class.season-switcher__item--active]="selectedSeason() === null"
+                    (click)="selectSeason(null)">
+              <i class="bi bi-collection"></i> كل المواسم
+            </button>
+            <div class="season-switcher__divider" *ngIf="seasons().length > 0"></div>
+            <button *ngFor="let s of seasons()" type="button" class="season-switcher__item"
+                    [class.season-switcher__item--active]="selectedSeason()?.id === s.id"
+                    (click)="selectSeason(s.id)">
+              <i class="bi" [class.bi-star-fill]="s.isDefault" [class.bi-calendar3]="!s.isDefault"></i>
+              {{ s.name }}
+              <span *ngIf="s.isDefault" class="season-switcher__badge">افتراضى</span>
+            </button>
+            <div class="season-switcher__divider"></div>
+            <button type="button" class="season-switcher__item season-switcher__item--manage"
+                    (click)="goToSeasonsPage()">
+              <i class="bi bi-gear"></i> إدارة المواسم
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- User -->
+      <button type="button" class="topbar__user" *ngIf="fullName() || email()"
+              (click)="goToProfile()" title="حسابى">
+        <span class="avatar">
+          {{ (fullName() || email() || '').charAt(0).toUpperCase() }}
+        </span>
+        <span class="topbar__user-name">{{ fullName() || email() }}</span>
+      </button>
+
+      <button type="button" class="topbar__logout" (click)="logout()" title="خروج" aria-label="خروج">
+        <i class="bi bi-box-arrow-right"></i>
+      </button>
+
+      <!-- Hamburger (mobile only) -->
+      <button type="button" class="topbar__burger"
+              (click)="toggleMobileMenu()"
+              [attr.aria-expanded]="mobileMenuOpen()"
+              aria-label="القائمة">
+        <i class="bi" [class.bi-list]="!mobileMenuOpen()" [class.bi-x-lg]="mobileMenuOpen()"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile drawer (full-width panel under the toolbar) -->
+  <div class="topbar__drawer" *ngIf="mobileMenuOpen()" (click)="closeMobileMenu()">
+    <div class="topbar__drawer-inner" (click)="$event.stopPropagation()">
+      <!-- Context info -->
+      <div class="topbar__drawer-section" *ngIf="tenantName() || showSeasonSwitcher()">
+        <div class="topbar__drawer-context" *ngIf="tenantName()">
+          <i class="bi bi-building"></i>
+          <span>{{ tenantName() }}</span>
+        </div>
+        <div class="topbar__drawer-context" *ngIf="showSeasonSwitcher()">
+          <i class="bi bi-calendar3-event"></i>
+          <span>{{ selectedSeason()?.name || 'كل المواسم' }}</span>
+          <button type="button" class="topbar__drawer-change"
+                  (click)="toggleSeasonMenu()">
+            تغيير
+          </button>
+        </div>
+
+        <!-- Season options shown inline inside the drawer when toggled -->
+        <div class="topbar__drawer-seasons" *ngIf="showSeasonSwitcher() && seasonMenuOpen()">
+          <button type="button" class="topbar__drawer-link"
+                  [class.topbar__drawer-link--active]="selectedSeason() === null"
+                  (click)="selectSeason(null)">
+            <i class="bi bi-collection"></i> كل المواسم
+          </button>
+          <button *ngFor="let s of seasons()" type="button" class="topbar__drawer-link"
+                  [class.topbar__drawer-link--active]="selectedSeason()?.id === s.id"
+                  (click)="selectSeason(s.id)">
+            <i class="bi" [class.bi-star-fill]="s.isDefault" [class.bi-calendar3]="!s.isDefault"></i>
+            {{ s.name }}
+            <span *ngIf="s.isDefault" class="season-switcher__badge">افتراضى</span>
+          </button>
+          <button type="button" class="topbar__drawer-link topbar__drawer-link--manage"
+                  (click)="goToSeasonsPage()">
+            <i class="bi bi-gear"></i> إدارة المواسم
+          </button>
+        </div>
+      </div>
+
+      <!-- Nav links stacked -->
+      <div class="topbar__drawer-section">
+        <a *ngFor="let link of links()"
+           class="topbar__drawer-link"
+           [routerLink]="link.path"
+           routerLinkActive="topbar__drawer-link--active"
+           [routerLinkActiveOptions]="{ exact: link.exact }"
+           (click)="onNavLinkClick()">
+          {{ link.label }}
+        </a>
+      </div>
+
+      <!-- User + logout footer -->
+      <div class="topbar__drawer-footer" *ngIf="fullName() || email()">
+        <button type="button" class="topbar__drawer-user" (click)="goToProfile()">
+          <span class="avatar">{{ (fullName() || email() || '').charAt(0).toUpperCase() }}</span>
+          <span>{{ fullName() || email() }}</span>
+        </button>
+        <button type="button" class="topbar__drawer-logout" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i> خروج
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>

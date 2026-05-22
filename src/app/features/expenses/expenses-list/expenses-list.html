@@ -1,0 +1,138 @@
+<div class="page">
+  <div class="page-toolbar mb-4">
+    <div>
+      <h2 class="mb-1">💰 المصاريف</h2>
+      <p class="text-muted mb-0">سجِّل وتابع كل المصاريف</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAdd()">
+      <i class="bi bi-plus-lg"></i>
+      <span class="ms-1">إضافة مصروف</span>
+    </button>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="stat-card">
+        <div class="stat-card__label">إجمالى المصاريف</div>
+        <div class="stat-card__value">{{ total() | egp }}</div>
+        <div class="stat-card__icon stat-card__icon--danger">💰</div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="stat-card">
+        <div class="stat-card__label">عدد المصاريف</div>
+        <div class="stat-card__value">{{ summary().count }}</div>
+        <div class="stat-card__icon stat-card__icon--info">📋</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar mb-3">
+    <div class="filter-bar__field filter-bar__field--grow">
+      <i class="bi bi-search"></i>
+      <input type="text" class="form-control" placeholder="بحث فى وصف المصروف..."
+             [ngModel]="search()" (ngModelChange)="onSearchInput($event)" />
+    </div>
+    <div class="filter-bar__field">
+      <label>من</label>
+      <input type="date" class="form-control" [ngModel]="from()" (ngModelChange)="onFromChange($event)" />
+    </div>
+    <div class="filter-bar__field">
+      <label>إلى</label>
+      <input type="date" class="form-control" [ngModel]="to()" (ngModelChange)="onToChange($event)" />
+    </div>
+    <button type="button" class="btn btn-secondary" (click)="resetFilters()" [disabled]="!hasFilters()">
+      <i class="bi bi-x-circle"></i> مسح الفلاتر
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 text-center align-middle">
+        <thead>
+          <tr><th>التاريخ</th><th>المبلغ</th><th>الوصف</th><th>إجراءات</th></tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let e of expenses()">
+            <td>{{ e.date | date:'yyyy-MM-dd' }}</td>
+            <td><strong>{{ e.amount | egp }}</strong></td>
+            <td>{{ e.description }}</td>
+            <td>
+              <button class="btn btn-sm btn-info me-1" (click)="edit(e)">
+                <i class="bi bi-pencil"></i> تعديل
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="askDelete(e.id)">
+                <i class="bi bi-trash"></i> حذف
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="expenses().length === 0 && !loading()">
+            <td colspan="4" class="empty-state py-5">
+              <div class="empty-state__icon">📭</div>
+              <div>{{ hasFilters() ? 'لا توجد نتائج مطابقة' : 'لا توجد مصاريف مسجَّلة بعد' }}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination footer -->
+    <div class="pagination-bar" *ngIf="totalCount() > 0">
+      <div class="pagination-bar__info">
+        عرض <strong>{{ pageStart() }}</strong> – <strong>{{ pageEnd() }}</strong>
+        من <strong>{{ totalCount() }}</strong>
+      </div>
+
+      <div class="pagination-bar__controls">
+        <button class="btn btn-sm btn-secondary" [disabled]="page() === 1" (click)="goToPage(page() - 1)">
+          <i class="bi bi-chevron-right"></i> السابق
+        </button>
+        <span class="page-indicator">صفحة <strong>{{ page() }}</strong> من <strong>{{ totalPages() }}</strong></span>
+        <button class="btn btn-sm btn-secondary" [disabled]="page() === totalPages()" (click)="goToPage(page() + 1)">
+          التالى <i class="bi bi-chevron-left"></i>
+        </button>
+      </div>
+
+      <div class="pagination-bar__size">
+        <label>عرض</label>
+        <select class="form-select form-select-sm" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let s of pageSizeOptions" [ngValue]="s">{{ s }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <app-form-modal
+    [open]="showModal()"
+    [title]="editingId() !== null ? 'تعديل مصروف' : 'إضافة مصروف جديد'"
+    [saveLabel]="editingId() !== null ? 'تحديث' : 'إضافة'"
+    (save)="save()"
+    (cancel)="cancel()">
+    <div class="row g-3">
+      <div class="col-md-4">
+        <label class="form-label">التاريخ</label>
+        <input type="date" class="form-control" [ngModel]="form().date"
+               (ngModelChange)="updateForm('date', $event)" />
+      </div>
+      <div class="col-md-4">
+        <label class="form-label">المبلغ</label>
+        <input type="number" class="form-control" [ngModel]="form().amount"
+               (ngModelChange)="updateForm('amount', +$event)" />
+      </div>
+      <div class="col-md-12">
+        <label class="form-label">الوصف</label>
+        <input type="text" class="form-control" [ngModel]="form().description"
+               (ngModelChange)="updateForm('description', $event)" />
+      </div>
+    </div>
+  </app-form-modal>
+
+  <app-confirm-delete-modal
+    [open]="deleteId() !== null"
+    title="تأكيد الحذف"
+    message="هل أنت متأكد من حذف هذا المصروف؟"
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()">
+  </app-confirm-delete-modal>
+</div>

@@ -1,0 +1,81 @@
+<div class="page">
+  <div class="page-header mb-4">
+    <h2 class="mb-1">مرحباً، {{ fullName() }} 👋</h2>
+    <p class="text-muted mb-0">نظرة سريعة على حساباتك</p>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-md-6 col-lg-3">
+      <a [routerLink]="['/features/farmer-transactions']" class="dash-card dash-card--primary">
+        <div class="dash-card__icon">🧾</div>
+        <div class="dash-card__body">
+          <div class="dash-card__title">فواتير الفلاحين</div>
+          <div class="dash-card__value">{{ farmersSummary().total | egp }}</div>
+          <div class="dash-card__meta">
+            <span><strong>{{ farmersSummary().remaining | egp }}</strong> متبقى</span>
+            <span class="dot">·</span>
+            <span><strong>{{ farmersSummary().count }}</strong> فاتورة</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <a [routerLink]="['/features/trader-transactions']" class="dash-card dash-card--warning">
+        <div class="dash-card__icon">💼</div>
+        <div class="dash-card__body">
+          <div class="dash-card__title">فواتير التجار</div>
+          <div class="dash-card__value">{{ tradersSummary().total | egp }}</div>
+          <div class="dash-card__meta">
+            <span>عمولة <strong>{{ tradersSummary().totalCommission | egp }}</strong></span>
+            <span class="dot">·</span>
+            <span><strong>{{ tradersSummary().count }}</strong> فاتورة</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <a [routerLink]="['/features/refrigerators']" class="dash-card dash-card--info">
+        <div class="dash-card__icon">❄️</div>
+        <div class="dash-card__body">
+          <div class="dash-card__title">التلاجات</div>
+          <div class="dash-card__value">{{ refrigeratorsSummary().totalWeight | number:'1.0-0' }} <small class="text-muted">كجم</small></div>
+          <div class="dash-card__meta">
+            <span><strong>{{ refrigeratorsSummary().count }}</strong> تلاجة</span>
+            <span class="dot">·</span>
+            <span><strong>{{ refrigeratorsSummary().totalSackCount | number }}</strong> شيكارة</span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <a [routerLink]="['/features/expenses']" class="dash-card dash-card--danger">
+        <div class="dash-card__icon">💰</div>
+        <div class="dash-card__body">
+          <div class="dash-card__title">المصاريف</div>
+          <div class="dash-card__value">{{ expensesSummary().total | egp }}</div>
+          <div class="dash-card__meta">
+            <span><strong>{{ expensesSummary().count }}</strong> مصروف مسجَّل</span>
+            <span class="dot" *ngIf="refrigeratorsSummary().totalExpenses > 0">·</span>
+            <span *ngIf="refrigeratorsSummary().totalExpenses > 0">تلاجات <strong>{{ refrigeratorsSummary().totalExpenses | egp }}</strong></span>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-3">
+      <div class="dash-card dash-card--info dash-card--static" [class.is-loss]="netProfit() < 0">
+        <div class="dash-card__icon">📊</div>
+        <div class="dash-card__body">
+          <div class="dash-card__title">صافى الربح</div>
+          <div class="dash-card__value">{{ netProfit() | egp }}</div>
+          <div class="dash-card__meta">
+            <span>{{ netProfit() >= 0 ? 'ربح' : 'خسارة' }} حتى الآن</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

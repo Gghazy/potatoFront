@@ -1,0 +1,115 @@
+<div class="page profile-page">
+  <div class="page-toolbar mb-4">
+    <div>
+      <h2 class="mb-1">👤 حسابى</h2>
+      <p class="text-muted mb-0">عدل بياناتك أو غير كلمة المرور</p>
+    </div>
+  </div>
+
+  <div class="loading-card" *ngIf="loading()">جارٍ التحميل...</div>
+
+  <div class="row g-4" *ngIf="!loading() && profile() as p">
+    <!-- Profile info -->
+    <div class="col-lg-7">
+      <section class="card profile-card">
+        <header class="profile-card__header">
+          <i class="bi bi-person-vcard"></i>
+          <span>البيانات الشخصية</span>
+        </header>
+
+        <div class="profile-card__body">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <label class="form-label">الاسم الكامل</label>
+              <input type="text" class="form-control"
+                     [ngModel]="profileForm().fullName"
+                     (ngModelChange)="updateProfileField('fullName', $event)" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">رقم التليفون</label>
+              <input type="tel" class="form-control" dir="ltr"
+                     [ngModel]="profileForm().phoneNumber"
+                     (ngModelChange)="updateProfileField('phoneNumber', $event)"
+                     placeholder="01012345678" />
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">البريد الإلكترونى <span class="text-muted small">(اختيارى)</span></label>
+              <input type="email" class="form-control" dir="ltr"
+                     [ngModel]="profileForm().email ?? ''"
+                     (ngModelChange)="updateProfileField('email', $event)"
+                     placeholder="name@example.com" />
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end mt-4">
+            <button type="button" class="btn btn-primary" [disabled]="savingProfile()" (click)="saveProfile()">
+              <i class="bi bi-check-lg"></i>
+              {{ savingProfile() ? 'جارٍ الحفظ…' : 'حفظ البيانات' }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Read-only info + password -->
+    <div class="col-lg-5">
+      <section class="card profile-card mb-4">
+        <header class="profile-card__header">
+          <i class="bi bi-shield-check"></i>
+          <span>معلومات الحساب</span>
+        </header>
+        <div class="profile-card__body">
+          <div class="info-row">
+            <span class="info-row__label">الدور</span>
+            <span class="info-row__value">
+              <span class="badge" [class.badge-admin]="p.role === 'Admin'"
+                    [class.badge-superadmin]="p.role === 'SuperAdmin'"
+                    [class.badge-user]="p.role === 'User'">{{ p.role }}</span>
+            </span>
+          </div>
+          <div class="info-row" *ngIf="p.tenantName">
+            <span class="info-row__label">الشركة</span>
+            <span class="info-row__value">{{ p.tenantName }}</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="card profile-card">
+        <header class="profile-card__header">
+          <i class="bi bi-key"></i>
+          <span>تغيير كلمة المرور</span>
+        </header>
+        <div class="profile-card__body">
+          <div class="mb-3">
+            <label class="form-label">كلمة المرور الحالية</label>
+            <input type="password" class="form-control"
+                   [ngModel]="passwordForm().currentPassword"
+                   (ngModelChange)="updatePasswordField('currentPassword', $event)"
+                   autocomplete="current-password" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">كلمة المرور الجديدة</label>
+            <input type="password" class="form-control"
+                   [ngModel]="passwordForm().newPassword"
+                   (ngModelChange)="updatePasswordField('newPassword', $event)"
+                   autocomplete="new-password" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+            <input type="password" class="form-control"
+                   [ngModel]="passwordConfirm()"
+                   (ngModelChange)="passwordConfirm.set($event)"
+                   autocomplete="new-password" />
+          </div>
+
+          <div class="d-flex justify-content-end">
+            <button type="button" class="btn btn-warning" [disabled]="savingPassword()" (click)="changePassword()">
+              <i class="bi bi-key-fill"></i>
+              {{ savingPassword() ? 'جارٍ التغيير…' : 'تغيير كلمة المرور' }}
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

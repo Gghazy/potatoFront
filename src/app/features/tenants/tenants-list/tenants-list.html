@@ -1,0 +1,104 @@
+<div class="page">
+  <div class="page-toolbar mb-4">
+    <div>
+      <h2 class="mb-1">🏢 الشركات</h2>
+      <p class="text-muted mb-0">إدارة شركات النظام وإنشاء حسابات المدراء</p>
+    </div>
+    <button class="btn btn-primary" (click)="openAdd()">
+      <i class="bi bi-plus-lg"></i>
+      <span class="ms-1">إضافة شركة</span>
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>اسم الشركة</th>
+            <th>الحالة</th>
+            <th>تاريخ الإنشاء</th>
+            <th class="text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of tenants()">
+            <td class="text-muted">{{ t.id }}</td>
+            <td class="fw-semibold">{{ t.name }}</td>
+            <td>
+              <span class="badge" [class.badge-active]="t.isActive" [class.badge-inactive]="!t.isActive">
+                {{ t.isActive ? 'نشطة' : 'موقوفة' }}
+              </span>
+            </td>
+            <td>{{ t.createdAt | date:'yyyy-MM-dd' }}</td>
+            <td class="text-center">
+              <button class="btn btn-sm me-1"
+                      [class.btn-warning]="t.isActive"
+                      [class.btn-success]="!t.isActive"
+                      (click)="toggleActive(t)">
+                <i class="bi" [class.bi-pause-fill]="t.isActive" [class.bi-play-fill]="!t.isActive"></i>
+                {{ t.isActive ? 'إيقاف' : 'تفعيل' }}
+              </button>
+              <button class="btn btn-sm btn-danger" (click)="askDelete(t.id)">
+                <i class="bi bi-trash"></i> حذف
+              </button>
+            </td>
+          </tr>
+          <tr *ngIf="tenants().length === 0">
+            <td colspan="5" class="empty-state py-5 text-center">
+              <div class="empty-state__icon">🏢</div>
+              <div>لا توجد شركات بعد</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <app-form-modal
+    [open]="showModal()"
+    title="إضافة شركة جديدة"
+    saveLabel="إنشاء"
+    [saving]="saving()"
+    size="lg"
+    (save)="save()"
+    (cancel)="cancel()">
+    <div class="row g-3">
+      <div class="col-md-12">
+        <label class="form-label">اسم الشركة</label>
+        <input type="text" class="form-control" [ngModel]="form().name"
+               (ngModelChange)="updateForm('name', $event)" placeholder="مثال: مزرعة الفيوم" />
+      </div>
+
+      <div class="col-12 mt-4">
+        <h6 class="mb-2 text-secondary fw-semibold">حساب المدير الأول</h6>
+        <div class="text-muted small mb-3">هذا الحساب هو أول Admin للشركة، وله صلاحية إضافة باقى مستخدمى الشركة.</div>
+      </div>
+
+      <div class="col-md-6">
+        <label class="form-label">اسم المدير</label>
+        <input type="text" class="form-control" [ngModel]="form().adminFullName"
+               (ngModelChange)="updateForm('adminFullName', $event)" placeholder="مثال: أحمد محمد" />
+      </div>
+      <div class="col-md-6">
+        <label class="form-label">البريد الإلكترونى</label>
+        <input type="email" class="form-control" [ngModel]="form().adminEmail"
+               (ngModelChange)="updateForm('adminEmail', $event)" placeholder="admin@example.com" />
+      </div>
+      <div class="col-md-12">
+        <label class="form-label">كلمة المرور <span class="text-muted small">(٦ أحرف على الأقل)</span></label>
+        <input type="password" class="form-control" [ngModel]="form().adminPassword"
+               (ngModelChange)="updateForm('adminPassword', $event)" placeholder="••••••••" />
+      </div>
+    </div>
+  </app-form-modal>
+
+  <app-confirm-delete-modal
+    [open]="deleteId() !== null"
+    title="تأكيد حذف الشركة"
+    message="هل أنت متأكد من حذف هذه الشركة؟ كل بياناتها ستتأثر."
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()">
+  </app-confirm-delete-modal>
+</div>

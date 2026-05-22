@@ -1,0 +1,86 @@
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row-actions__menu {
+  position: relative;
+  display: inline-block;
+}
+
+.row-actions__toggle {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: var(--text-muted, #64748b);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.row-actions__toggle:hover,
+.row-actions__toggle--open {
+  background: var(--bs-secondary-bg, #f1f5f9);
+  border-color: var(--bs-border-color, #e2e8f0);
+  color: var(--text, #1e293b);
+}
+
+.row-actions__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  inset-inline-end: 0;
+  min-width: 160px;
+  background: #fff;
+  border: 1px solid var(--bs-border-color, #e2e8f0);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  padding: 6px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.row-actions__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  text-align: start;
+  font-size: 14px;
+  color: var(--text, #1e293b);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.12s ease;
+}
+
+.row-actions__item:hover:not(:disabled) {
+  background: var(--bs-secondary-bg, #f1f5f9);
+}
+
+.row-actions__item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.row-actions__item--warning { color: var(--bs-warning-text-emphasis, #b45309); }
+.row-actions__item--warning:hover:not(:disabled) { background: var(--bs-warning-bg-subtle, #fef3c7); }
+
+.row-actions__item--success { color: var(--bs-success-text-emphasis, #15803d); }
+.row-actions__item--success:hover:not(:disabled) { background: var(--bs-success-bg-subtle, #dcfce7); }
+
+.row-actions__item--danger { color: var(--bs-danger-text-emphasis, #b91c1c); }
+.row-actions__item--danger:hover:not(:disabled) { background: var(--bs-danger-bg-subtle, #fee2e2); }
+
+.row-actions__divider {
+  height: 1px;
+  background: var(--bs-border-color, #e2e8f0);
+  margin: 4px 0;
+}

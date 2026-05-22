@@ -1,0 +1,37 @@
+.page { padding: 8px 0; }
+
+.page-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.page-toolbar h2 { font-size: 1.5rem; font-weight: 700; }
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.badge-active   { background: var(--success-soft); color: var(--success); }
+.badge-inactive { background: var(--warning-soft); color: var(--warning); }
+
+.btn-warning {
+  background: var(--warning-soft);
+  border-color: var(--warning-soft);
+  color: var(--warning);
+}
+.btn-warning:hover { background: var(--warning); color: #fff; border-color: var(--warning); }
+
+.btn-success {
+  background: var(--success-soft);
+  border-color: var(--success-soft);
+  color: var(--success);
+}
+.btn-success:hover { background: var(--success); color: #fff; border-color: var(--success); }
+
+.empty-state { color: var(--text-muted); font-size: 0.95rem; }
+.empty-state__icon { font-size: 36px; margin-bottom: 8px; }

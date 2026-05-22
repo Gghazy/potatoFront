@@ -1,0 +1,23 @@
+.page { padding: 8px 0; }
+
+.page-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.page-toolbar h2 { font-size: 1.5rem; font-weight: 700; }
+
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.badge-admin { background: var(--primary-soft); color: var(--primary-soft-text); }
+.badge-user  { background: var(--info-soft);    color: var(--info); }
+
+.empty-state { color: var(--text-muted); font-size: 0.95rem; }
+.empty-state__icon { font-size: 36px; margin-bottom: 8px; }

@@ -1,0 +1,196 @@
+<div class="page">
+  <div class="page-toolbar mb-4">
+    <div>
+      <h2 class="mb-1">💼 فواتير التجار</h2>
+      <p class="text-muted mb-0">إدارة فواتير البيع للتجار والعمولات والدفعات</p>
+    </div>
+    <button class="btn btn-primary" (click)="goToNew()">
+      <i class="bi bi-plus-lg"></i>
+      <span class="ms-1">إضافة فاتورة</span>
+    </button>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-card__label">الإجمالى</div>
+        <div class="stat-card__value">{{ summary().total | egp }}</div>
+        <div class="stat-card__icon stat-card__icon--info">💼</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-card__label">المسدد</div>
+        <div class="stat-card__value text-success">{{ summary().paid | egp }}</div>
+        <div class="stat-card__icon stat-card__icon--success">✓</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-card__label">المتبقى</div>
+        <div class="stat-card__value text-danger">{{ summary().remaining | egp }}</div>
+        <div class="stat-card__icon stat-card__icon--danger">⏳</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="stat-card">
+        <div class="stat-card__label">إجمالى العمولة</div>
+        <div class="stat-card__value text-warning">{{ summary().totalCommission | egp }}</div>
+        <div class="stat-card__icon stat-card__icon--warning">💰</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weights section -->
+  <div class="weights-section mb-4">
+    <div class="weights-section__header">
+      <i class="bi bi-speedometer2"></i>
+      <span>الأوزان الإجمالية</span>
+    </div>
+    <div class="weights-section__body">
+      <div class="weights-section__item">
+        <span class="weights-section__label">إجمالى الوزن (فعلى)</span>
+        <strong class="weights-section__value">
+          {{ summary().totalWeight | number:'1.2-2' }} <small class="text-muted">كجم</small>
+        </strong>
+      </div>
+      <div class="weights-section__divider"></div>
+      <div class="weights-section__item">
+        <span class="weights-section__label">إجمالى الوزن الصافى</span>
+        <strong class="weights-section__value weights-section__value--accent">
+          {{ summary().totalNetWeight | number:'1.2-2' }} <small class="text-muted">كجم</small>
+        </strong>
+      </div>
+      <div class="weights-section__divider"></div>
+      <div class="weights-section__item">
+        <span class="weights-section__label">عدد الفواتير</span>
+        <strong class="weights-section__value">{{ summary().count }}</strong>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar mb-3">
+    <div class="filter-bar__field filter-bar__field--grow">
+      <i class="bi bi-search"></i>
+      <input type="text" class="form-control" placeholder="بحث باسم التاجر..."
+             [ngModel]="search()" (ngModelChange)="onSearchInput($event)" />
+    </div>
+    <div class="filter-bar__field">
+      <label>من</label>
+      <input type="date" class="form-control" [ngModel]="from()" (ngModelChange)="onFromChange($event)" />
+    </div>
+    <div class="filter-bar__field">
+      <label>إلى</label>
+      <input type="date" class="form-control" [ngModel]="to()" (ngModelChange)="onToChange($event)" />
+    </div>
+    <button type="button" class="btn btn-secondary" (click)="resetFilters()" [disabled]="!hasFilters()">
+      <i class="bi bi-x-circle"></i> مسح الفلاتر
+    </button>
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 text-center align-middle">
+        <thead>
+          <tr>
+            <th>تواريخ</th>
+            <th>التاجر</th>
+            <th>عناصر</th>
+            <th>الوزن الصافى</th>
+            <th>الإجمالى</th>
+            <th>العمولة</th>
+            <th>المسدَّد</th>
+            <th>المتبقى</th>
+            <th>الحالة</th>
+            <th>ملاحظات</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let t of transactions()" [class.paid-row]="t.isPaid" class="row-clickable"
+              (click)="viewDetails(t.id)">
+            <td class="text-nowrap">
+              <div *ngIf="t.latestItemDate">{{ t.latestItemDate | date:'yyyy-MM-dd' }}</div>
+              <small *ngIf="t.earliestItemDate && t.earliestItemDate !== t.latestItemDate" class="text-muted">
+                من {{ t.earliestItemDate | date:'yyyy-MM-dd' }}
+              </small>
+              <span *ngIf="!t.latestItemDate" class="text-muted">—</span>
+            </td>
+            <td class="text-nowrap">
+              <div class="fw-semibold">{{ t.traderName }}</div>
+              <small class="text-muted" *ngIf="t.traderPhoneNumber">
+                <i class="bi bi-telephone"></i> {{ t.traderPhoneNumber }}
+              </small>
+            </td>
+            <td><span class="chip">{{ t.items.length }}</span></td>
+            <td>{{ t.totalNetWeight | number:'1.2-2' }}</td>
+            <td><strong>{{ t.totalAmount | egp }}</strong></td>
+            <td class="text-warning">{{ t.totalCommission | egp }}</td>
+            <td class="text-success">{{ t.totalPaid | egp }}</td>
+            <td [class.text-danger]="t.remaining > 0">{{ t.remaining | egp }}</td>
+            <td>
+              <span class="badge" [class.badge-paid]="t.isPaid" [class.badge-unpaid]="!t.isPaid">
+                {{ t.isPaid ? 'مسدَّد' : 'متبقى' }}
+              </span>
+              <span class="badge badge-closed ms-1" *ngIf="t.isClosed" title="فاتورة مغلقة">
+                <i class="bi bi-lock-fill"></i> مغلقة
+              </span>
+            </td>
+            <td class="notes-cell text-start" [title]="t.notes ?? ''">
+              <span *ngIf="t.notes" class="notes-text">{{ t.notes }}</span>
+              <span *ngIf="!t.notes" class="text-muted">—</span>
+            </td>
+            <td>
+              <app-row-actions-menu
+                [isClosed]="t.isClosed"
+                (edit)="edit(t)"
+                (close)="closeInvoice(t)"
+                (reopen)="reopenInvoice(t)"
+                (delete)="askDelete(t.id)">
+              </app-row-actions-menu>
+            </td>
+          </tr>
+          <tr *ngIf="transactions().length === 0 && !loading()">
+            <td colspan="11" class="empty-state py-5">
+              <div class="empty-state__icon">📭</div>
+              <div>{{ hasFilters() ? 'لا توجد نتائج مطابقة' : 'لا توجد فواتير مسجَّلة بعد' }}</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar" *ngIf="totalCount() > 0">
+      <div class="pagination-bar__info">
+        عرض <strong>{{ pageStart() }}</strong> – <strong>{{ pageEnd() }}</strong>
+        من <strong>{{ totalCount() }}</strong>
+      </div>
+
+      <div class="pagination-bar__controls">
+        <button class="btn btn-sm btn-secondary" [disabled]="page() === 1" (click)="goToPage(page() - 1)">
+          <i class="bi bi-chevron-right"></i> السابق
+        </button>
+        <span class="page-indicator">صفحة <strong>{{ page() }}</strong> من <strong>{{ totalPages() }}</strong></span>
+        <button class="btn btn-sm btn-secondary" [disabled]="page() === totalPages()" (click)="goToPage(page() + 1)">
+          التالى <i class="bi bi-chevron-left"></i>
+        </button>
+      </div>
+
+      <div class="pagination-bar__size">
+        <label>عرض</label>
+        <select class="form-select form-select-sm" [ngModel]="pageSize()" (ngModelChange)="onPageSizeChange($event)">
+          <option *ngFor="let s of pageSizeOptions" [ngValue]="s">{{ s }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <app-confirm-delete-modal
+    [open]="deleteId() !== null"
+    title="تأكيد الحذف"
+    message="هل أنت متأكد من حذف هذه الفاتورة؟ هتُحذف معها كل الدفعات والصور المرتبطة بيها."
+    (confirm)="confirmDelete()"
+    (cancel)="cancelDelete()">
+  </app-confirm-delete-modal>
+</div>

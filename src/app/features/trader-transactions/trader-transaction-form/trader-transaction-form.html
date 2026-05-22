@@ -1,0 +1,442 @@
+<div class="page">
+  <div class="page-toolbar mb-4">
+    <div class="d-flex align-items-center gap-3">
+      <button class="btn btn-sm btn-secondary" (click)="back()" title="رجوع للقائمة">
+        <i class="bi bi-arrow-right"></i>
+      </button>
+      <div>
+        <h2 class="mb-1">
+          <ng-container *ngIf="isNew()">💼 فاتورة تاجر جديدة</ng-container>
+          <ng-container *ngIf="isEdit()">✏️ تعديل فاتورة تاجر</ng-container>
+          <ng-container *ngIf="isView()">💼 تفاصيل فاتورة التاجر</ng-container>
+        </h2>
+        <p class="text-muted mb-0" *ngIf="loaded() as t">
+          {{ t.traderName }}
+          <span *ngIf="t.latestItemDate">
+            — من {{ t.earliestItemDate | date:'yyyy-MM-dd' }}<span *ngIf="t.earliestItemDate !== t.latestItemDate"> إلى {{ t.latestItemDate | date:'yyyy-MM-dd' }}</span>
+          </span>
+          <span class="text-muted" *ngIf="t.traderPhoneNumber"> · <i class="bi bi-telephone"></i> {{ t.traderPhoneNumber }}</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2" *ngIf="isView() && loaded() as t">
+      <button class="btn btn-info" (click)="switchToEdit()" [disabled]="t.isClosed">
+        <i class="bi bi-pencil"></i> تعديل
+      </button>
+      <button *ngIf="!t.isClosed" class="btn btn-warning" (click)="closeInvoice()">
+        <i class="bi bi-lock"></i> إغلاق
+      </button>
+      <button *ngIf="t.isClosed" class="btn btn-success" (click)="reopenInvoice()">
+        <i class="bi bi-unlock"></i> فتح
+      </button>
+      <button class="btn btn-danger" (click)="askDelete()" [disabled]="t.isClosed">
+        <i class="bi bi-trash"></i> حذف
+      </button>
+    </div>
+
+    <div class="d-flex gap-2" *ngIf="isEditable()">
+      <button class="btn btn-secondary" (click)="cancelEdit()">إلغاء</button>
+      <button class="btn btn-primary" [disabled]="saving()" (click)="save()">
+        <i class="bi bi-check-lg"></i>
+        {{ isNew() ? 'إضافة' : 'حفظ التغييرات' }}
+      </button>
+    </div>
+  </div>
+
+  <div class="loading-card" *ngIf="loading()">جارٍ التحميل...</div>
+
+  <div class="card empty-card" *ngIf="!loading() && notFound()">
+    <div class="empty-state__icon">⚠️</div>
+    <div>الفاتورة غير موجودة أو لا تملك صلاحية عرضها</div>
+  </div>
+
+  <div class="row g-4" *ngIf="!loading() && !notFound()">
+    <div class="col-lg-8">
+      <fieldset class="bare-fieldset" [disabled]="!isEditable()">
+
+        <!-- Header (only trader; date moved to items) -->
+        <section class="form-section">
+          <header class="form-section__header">
+            <i class="bi bi-person-vcard"></i>
+            <span>بيانات أساسية</span>
+          </header>
+          <div class="row g-3" *ngIf="isEditable(); else viewHeader">
+            <div class="col-md-12">
+              <label class="form-label d-flex justify-content-between align-items-center">
+                <span>التاجر</span>
+                <button type="button" class="btn btn-link btn-sm p-0" (click)="goToTraders()">
+                  <i class="bi bi-plus-lg"></i> إضافة تاجر
+                </button>
+              </label>
+              <ng-select
+                class="ng-select-lg"
+                [items]="traders()"
+                bindLabel="name"
+                bindValue="id"
+                placeholder="اختر تاجر..."
+                notFoundText="لا يوجد تجار — أضف تاجر أولاً"
+                [ngModel]="form().traderId || null"
+                (ngModelChange)="updateHeader('traderId', $event || 0)">
+                <ng-template ng-option-tmp let-item="item">
+                  <div class="fw-semibold">{{ item.name }}</div>
+                  <small class="text-muted" *ngIf="item.phoneNumber">{{ item.phoneNumber }}</small>
+                </ng-template>
+              </ng-select>
+            </div>
+          </div>
+          <ng-template #viewHeader>
+            <div class="details-grid" *ngIf="loaded() as t">
+              <div><span class="details-label">التاجر</span><strong>{{ t.traderName }}</strong></div>
+              <div *ngIf="t.traderPhoneNumber"><span class="details-label">التليفون</span><strong dir="ltr">{{ t.traderPhoneNumber }}</strong></div>
+            </div>
+          </ng-template>
+        </section>
+
+        <!-- Items -->
+        <section class="form-section">
+          <header class="form-section__header">
+            <i class="bi bi-list-ul"></i>
+            <span>عناصر الفاتورة <span class="form-section__hint">({{ form().items.length }} عنصر)</span></span>
+            <button type="button" *ngIf="isEditable()" class="btn btn-sm btn-primary ms-auto" (click)="addItem()">
+              <i class="bi bi-plus-lg"></i> إضافة عنصر
+            </button>
+          </header>
+
+          <div class="items-table">
+            <div class="items-table__head">
+              <div class="items-table__cell items-table__cell--img">صورة</div>
+              <div class="items-table__cell items-table__cell--date">التاريخ</div>
+              <div class="items-table__cell items-table__cell--desc">الوصف</div>
+              <div class="items-table__cell items-table__cell--num">الوزن</div>
+              <div class="items-table__cell items-table__cell--num">السعر</div>
+              <div class="items-table__cell items-table__cell--tare" title="عيار: يخصم 3.5%">عيار</div>
+              <div class="items-table__cell items-table__cell--num">الصافى</div>
+              <div class="items-table__cell items-table__cell--amount">المبلغ</div>
+              <div class="items-table__cell items-table__cell--tare" title="عمولة">عمولة</div>
+              <div class="items-table__cell items-table__cell--num">سعر الطن</div>
+              <div class="items-table__cell items-table__cell--amount items-table__cell--commission">قيمة العمولة</div>
+              <div class="items-table__cell items-table__cell--action" *ngIf="isEditable()"></div>
+            </div>
+
+            <!-- Scrollable body containing the current page of items -->
+            <div class="items-table__body">
+              <ng-container *ngFor="let item of visibleItems(); let pageIdx = index; trackBy: trackByIndex">
+                <ng-container *ngTemplateOutlet="itemRowTpl; context: { $implicit: item, absIndex: visibleItemsStart() + pageIdx }"></ng-container>
+              </ng-container>
+            </div>
+
+            <ng-template #itemRowTpl let-item let-absIndex="absIndex">
+              <div class="items-table__row">
+                <!-- Image -->
+                <div class="items-table__cell items-table__cell--img">
+                  <div class="item-thumb">
+                    <ng-container *ngIf="item.pendingPreview as preview; else noPending">
+                      <img [src]="preview" alt="معاينة" class="item-thumb__img" (click)="openLightbox(preview)" />
+                      <button type="button" class="item-thumb__action item-thumb__action--remove"
+                              *ngIf="isEditable()" (click)="clearItemPendingFile(absIndex)" title="إلغاء الاختيار">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </ng-container>
+                    <ng-template #noPending>
+                      <ng-container *ngIf="item.imagePath as path; else noSavedImg">
+                        <img [src]="imageUrl(path)" alt="صورة العنصر"
+                             class="item-thumb__img" (click)="openLightbox(imageUrl(path))" />
+                        <button type="button" class="item-thumb__action item-thumb__action--remove"
+                                *ngIf="isEditable()" (click)="removeItemImage(absIndex)" title="حذف الصورة">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </ng-container>
+                      <ng-template #noSavedImg>
+                        <label *ngIf="isEditable(); else dashImg" class="item-thumb__upload" title="إرفاق صورة">
+                          <i class="bi bi-camera"></i>
+                          <input type="file" accept="image/*" hidden
+                                 (change)="onItemFileSelected(absIndex, $event)" />
+                        </label>
+                        <ng-template #dashImg><span class="text-muted">—</span></ng-template>
+                      </ng-template>
+                    </ng-template>
+                  </div>
+                </div>
+
+                <!-- Date -->
+                <div class="items-table__cell items-table__cell--date">
+                  <input *ngIf="isEditable(); else dateView"
+                         type="date" class="form-control form-control-sm"
+                         [ngModel]="item.date"
+                         (ngModelChange)="updateItemField(absIndex, 'date', $event)" />
+                  <ng-template #dateView><span>{{ item.date | date:'yyyy-MM-dd' }}</span></ng-template>
+                </div>
+
+                <!-- Description -->
+                <div class="items-table__cell items-table__cell--desc">
+                  <input *ngIf="isEditable(); else descView"
+                         type="text" class="form-control form-control-sm"
+                         placeholder="وصف اختيارى"
+                         [ngModel]="item.description ?? ''"
+                         (ngModelChange)="updateItemField(absIndex, 'description', $event)" />
+                  <ng-template #descView>
+                    <span>{{ item.description || '—' }}</span>
+                  </ng-template>
+                </div>
+
+                <!-- Weight -->
+                <div class="items-table__cell items-table__cell--num">
+                  <input *ngIf="isEditable(); else wView"
+                         type="number" class="form-control form-control-sm text-center"
+                         [ngModel]="item.weight"
+                         (ngModelChange)="updateItemField(absIndex, 'weight', $event)" />
+                  <ng-template #wView><span>{{ item.weight | number:'1.2-2' }}</span></ng-template>
+                </div>
+
+                <!-- Price -->
+                <div class="items-table__cell items-table__cell--num">
+                  <input *ngIf="isEditable(); else pView"
+                         type="number" class="form-control form-control-sm text-center"
+                         [ngModel]="item.price"
+                         (ngModelChange)="updateItemField(absIndex, 'price', $event)" />
+                  <ng-template #pView><span>{{ item.price | number:'1.2-2' }}</span></ng-template>
+                </div>
+
+                <!-- Tare toggle -->
+                <div class="items-table__cell items-table__cell--tare">
+                  <label *ngIf="isEditable(); else tareView" class="tare-switch" [title]="item.hasTare ? 'فيه عيار' : 'مفيش عيار'">
+                    <input type="checkbox" [checked]="item.hasTare" (change)="toggleItemTare(absIndex)" />
+                    <span class="tare-switch__slider"></span>
+                  </label>
+                  <ng-template #tareView>
+                    <i class="bi" [class.bi-check-circle-fill]="item.hasTare" [class.bi-dash-circle]="!item.hasTare"
+                       [class.text-success]="item.hasTare" [class.text-muted]="!item.hasTare"></i>
+                  </ng-template>
+                </div>
+
+                <!-- Net -->
+                <div class="items-table__cell items-table__cell--num text-muted">
+                  {{ itemNetWeight(item) | number:'1.2-2' }}
+                </div>
+                <!-- Amount -->
+                <div class="items-table__cell items-table__cell--amount">
+                  <strong>{{ itemAmount(item) | egp }}</strong>
+                </div>
+
+                <!-- Commission toggle -->
+                <div class="items-table__cell items-table__cell--tare">
+                  <label *ngIf="isEditable(); else commView" class="tare-switch tare-switch--commission"
+                         [title]="item.hasCommission ? 'فيه عمولة' : 'مفيش عمولة'">
+                    <input type="checkbox" [checked]="item.hasCommission" (change)="toggleItemCommission(absIndex)" />
+                    <span class="tare-switch__slider"></span>
+                  </label>
+                  <ng-template #commView>
+                    <i class="bi" [class.bi-check-circle-fill]="item.hasCommission" [class.bi-dash-circle]="!item.hasCommission"
+                       [class.text-warning]="item.hasCommission" [class.text-muted]="!item.hasCommission"></i>
+                  </ng-template>
+                </div>
+
+                <!-- Commission per ton -->
+                <div class="items-table__cell items-table__cell--num">
+                  <input *ngIf="isEditable() && item.hasCommission; else cptView"
+                         type="number" class="form-control form-control-sm text-center"
+                         placeholder="ج.م/طن"
+                         [ngModel]="item.commissionPerTon"
+                         (ngModelChange)="updateItemField(absIndex, 'commissionPerTon', $event)" />
+                  <ng-template #cptView>
+                    <span [class.text-muted]="!item.hasCommission">
+                      {{ item.hasCommission ? (item.commissionPerTon | number:'1.2-2') : '—' }}
+                    </span>
+                  </ng-template>
+                </div>
+
+                <!-- Commission amount -->
+                <div class="items-table__cell items-table__cell--amount items-table__cell--commission">
+                  <strong class="text-warning" [class.text-muted]="!item.hasCommission">
+                    {{ itemCommission(item) | egp }}
+                  </strong>
+                </div>
+
+                <div class="items-table__cell items-table__cell--action" *ngIf="isEditable()">
+                  <button type="button" class="btn btn-sm btn-outline-danger"
+                          (click)="removeItem(absIndex)" title="حذف العنصر">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
+              </div>
+            </ng-template>
+
+            <div class="items-table__empty" *ngIf="form().items.length === 0">
+              <i class="bi bi-inbox"></i>
+              لا توجد عناصر <ng-container *ngIf="isEditable()">— اضغط <strong>"إضافة عنصر"</strong></ng-container>
+            </div>
+
+            <!-- Footer: pagination + totals -->
+            <div class="items-table__footer" *ngIf="form().items.length > 0">
+              <div class="items-table__pagination" *ngIf="itemsTotalPages() > 1">
+                <button type="button" class="btn btn-sm btn-secondary" [disabled]="itemsPage() === 1"
+                        (click)="goToItemsPage(itemsPage() - 1)">
+                  <i class="bi bi-chevron-right"></i>
+                </button>
+                <span class="items-table__page-indicator">
+                  صفحة <strong>{{ itemsPage() }}</strong> من <strong>{{ itemsTotalPages() }}</strong>
+                </span>
+                <button type="button" class="btn btn-sm btn-secondary" [disabled]="itemsPage() === itemsTotalPages()"
+                        (click)="goToItemsPage(itemsPage() + 1)">
+                  <i class="bi bi-chevron-left"></i>
+                </button>
+                <select class="form-select form-select-sm items-table__page-size"
+                        [ngModel]="itemsPageSize()" (ngModelChange)="onItemsPageSizeChange($event)">
+                  <option *ngFor="let s of itemsPageSizes" [ngValue]="s">{{ s }} لكل صفحة</option>
+                </select>
+              </div>
+
+              <div class="items-table__totals">
+                <span>وزن صافى <strong>{{ totalNetWeight() | number:'1.2-2' }}</strong> كجم</span>
+                <span class="items-table__totals-commission">عمولة: <strong>{{ totalCommission() | egp }}</strong></span>
+                <span class="items-table__totals-amount">{{ totalAmount() | egp }}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Payments -->
+        <section class="form-section" *ngIf="!isNew()">
+          <header class="form-section__header">
+            <i class="bi bi-cash-coin"></i>
+            <span>الدفعات من التاجر</span>
+            <button type="button" *ngIf="isEditable() && !showNewPayment()"
+                    class="btn btn-sm btn-success ms-auto" (click)="openNewPayment()">
+              <i class="bi bi-plus-lg"></i> إضافة دفعة
+            </button>
+          </header>
+
+          <div class="payment-add" *ngIf="isEditable() && showNewPayment()">
+            <div class="row g-2 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label small">تاريخ الدفعة</label>
+                <input type="date" class="form-control form-control-sm"
+                       [ngModel]="paymentForm().date"
+                       (ngModelChange)="updatePaymentField('date', $event)" />
+              </div>
+              <div class="col-md-3">
+                <label class="form-label small">المبلغ</label>
+                <div class="input-group input-group-sm">
+                  <input type="number" class="form-control text-center"
+                         [ngModel]="paymentForm().amount"
+                         (ngModelChange)="updatePaymentField('amount', +$event)" />
+                  <span class="input-group-text">ج.م</span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small">ملاحظات</label>
+                <input type="text" class="form-control form-control-sm"
+                       [ngModel]="paymentForm().notes ?? ''"
+                       (ngModelChange)="updatePaymentField('notes', $event)" />
+              </div>
+              <div class="col-md-2 d-flex gap-1">
+                <button type="button" class="btn btn-sm btn-success" [disabled]="savingPayment()" (click)="saveNewPayment()">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" (click)="cancelNewPayment()">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="payments-list">
+            <div class="payments-list__row" *ngFor="let p of existingPayments()">
+              <div class="payments-list__date"><i class="bi bi-calendar3"></i> {{ p.date | date:'yyyy-MM-dd' }}</div>
+              <div class="payments-list__notes" [title]="p.notes ?? ''">{{ p.notes || '—' }}</div>
+              <div class="payments-list__amount">{{ p.amount | egp }}</div>
+              <button *ngIf="isEditable()" type="button" class="btn btn-sm btn-link text-danger"
+                      (click)="deletePaymentRow(p)" title="حذف الدفعة">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+            <div class="payments-list__empty" *ngIf="existingPayments().length === 0 && !showNewPayment()">
+              <i class="bi bi-inbox"></i> لا توجد دفعات بعد
+            </div>
+          </div>
+        </section>
+
+        <!-- Notes -->
+        <section class="form-section">
+          <header class="form-section__header">
+            <i class="bi bi-sticky"></i>
+            <span>ملاحظات</span>
+            <span class="form-section__hint" *ngIf="isEditable()">اختيارى</span>
+          </header>
+          <textarea *ngIf="isEditable(); else notesView"
+                    class="form-control" rows="2" maxlength="1000"
+                    placeholder="أى ملاحظات إضافية..."
+                    [ngModel]="form().notes ?? ''"
+                    (ngModelChange)="updateHeader('notes', $event)"></textarea>
+          <ng-template #notesView>
+            <div class="notes-readonly" *ngIf="form().notes; else noNotes">{{ form().notes }}</div>
+            <ng-template #noNotes><div class="text-muted">لا توجد ملاحظات</div></ng-template>
+          </ng-template>
+        </section>
+
+      </fieldset>
+    </div>
+
+    <!-- Summary panel -->
+    <div class="col-lg-4">
+      <aside class="summary-panel">
+        <header class="summary-panel__header">
+          <i class="bi bi-receipt"></i>
+          <span>ملخص الفاتورة</span>
+          <span class="summary-panel__badge summary-panel__badge--closed ms-auto" *ngIf="isClosed()">
+            <i class="bi bi-lock-fill"></i> مغلقة
+          </span>
+        </header>
+
+        <div class="summary-panel__row">
+          <span class="summary-panel__label">عدد العناصر</span>
+          <strong class="summary-panel__value">{{ form().items.length }}</strong>
+        </div>
+        <div class="summary-panel__row">
+          <span class="summary-panel__label">الوزن الصافى</span>
+          <strong class="summary-panel__value">
+            {{ totalNetWeight() | number:'1.2-2' }}
+            <small class="text-muted">كجم</small>
+          </strong>
+        </div>
+
+        <div class="summary-panel__amount">
+          <span class="summary-panel__amount-label">إجمالى الفاتورة</span>
+          <span class="summary-panel__amount-value">{{ totalAmount() | egp }}</span>
+        </div>
+
+        <div class="summary-panel__commission">
+          <span class="summary-panel__amount-label">إجمالى العمولة <small>(دخل ليّا)</small></span>
+          <span class="summary-panel__commission-value">{{ totalCommission() | egp }}</span>
+        </div>
+
+        <div class="summary-panel__row" *ngIf="!isNew()">
+          <span class="summary-panel__label">المسدَّد</span>
+          <strong class="summary-panel__value text-success">{{ totalPaid() | egp }}</strong>
+        </div>
+        <div class="summary-panel__row" *ngIf="!isNew()">
+          <span class="summary-panel__label">المتبقى</span>
+          <strong class="summary-panel__value" [class.text-danger]="remaining() > 0"
+                  [class.text-success]="isFullyPaid()">{{ remaining() | egp }}</strong>
+        </div>
+
+        <div class="summary-panel__paid-chip" *ngIf="!isNew()"
+             [class.summary-panel__paid-chip--on]="isFullyPaid()">
+          <i class="bi" [class.bi-check-circle-fill]="isFullyPaid()" [class.bi-clock-history]="!isFullyPaid()"></i>
+          {{ isFullyPaid() ? 'مسدَّد بالكامل' : 'فيه متبقى' }}
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <app-image-lightbox [src]="lightboxSrc()" (close)="closeLightbox()"></app-image-lightbox>
+
+  <app-confirm-delete-modal
+    [open]="confirmDelete()"
+    title="تأكيد الحذف"
+    message="هل أنت متأكد من حذف هذه الفاتورة؟ هتُحذف معها كل الدفعات والصور المرتبطة بيها."
+    (confirm)="doDelete()"
+    (cancel)="cancelDelete()">
+  </app-confirm-delete-modal>
+</div>
